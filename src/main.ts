@@ -14,3 +14,4 @@ const router = createRouter({
 })
 app.use(router)
 app.mount('#app')
+console.log(1)

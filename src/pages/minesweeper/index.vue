@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { Block } from '~/types/mineswpeeper'
 
-const MAX_HEIGHT = 4
-const MAX_WIDTH = 4
+const MAX_HEIGHT = 10
+const MAX_WIDTH = 10
 const rate = 0.1
 const isDev = true
 let isGenerateMines = false
@@ -25,10 +25,10 @@ const arround = baseAround.map(x =>
   .filter(x => !(x[0] === 0 && x[1] === 0),
   )
 
-const state = reactive<Block[][]>(generateInitBlocks())
-const count = ref({ age: 12 })
+const state = ref<Block[][]>(generateInitBlocks())
+
 function generateMines(_block: Block) {
-  state.forEach((lineBlocks, x) => {
+  state.value.forEach((lineBlocks, x) => {
     lineBlocks.forEach((block) => {
       if (Math.random() < rate && !(_block.x === block.x && _block.y === block.y)) {
         block.isMine = true
@@ -52,6 +52,16 @@ function handleClick(block: Block) {
   }
 
   expandZero(block)
+  state.value.forEach((lines) => {
+    lines.forEach((_block) => {
+      if (_block.aroundMine === 0) {
+        getSibling(_block).forEach((__block) => {
+          if (!__block.isMine)
+            __block.revealed = true
+        })
+      }
+    })
+  })
 }
 function rightClick(block: Block) {
   if (block.revealed) return
@@ -66,11 +76,11 @@ function processBlockClassName(block: Block) {
 }
 function processBlockStyle(block: Block) {
   return {
-    color: mineNumberColros[block.aroundMine],
+    color: mineNumberColros[block.aroundMine!],
   }
 }
 function calcuateAroundMines() {
-  state.forEach((lineBlocks, x) => {
+  state.value.forEach((lineBlocks) => {
     lineBlocks.forEach((block) => {
       if (!block.isMine)
         block.aroundMine = getSibling(block).filter(x => x.isMine).length
@@ -81,7 +91,7 @@ function calcuateAroundMines() {
 function expandZero(block: Block) {
   getSibling(block)
     .forEach((_block) => {
-      if (_block.aroundMine === 0 && !_block.revealed) {
+      if (_block.aroundMine === 0 && !_block.revealed && !_block.isMine) {
         _block.revealed = true
         expandZero(_block)
       }
@@ -89,12 +99,12 @@ function expandZero(block: Block) {
 }
 
 function getSibling(block: Block) {
-  return arround.map(([x, y]) => state[block.x + x]?.[block.y + y])
+  return arround.map(([x, y]) => state.value[block.x + x]?.[block.y + y])
     .filter(Boolean)
 }
 
 function revealAll() {
-  const blocks = state.flat()
+  const blocks = state.value.flat()
   blocks.forEach((block) => {
     block.revealed = true
   })
@@ -102,7 +112,7 @@ function revealAll() {
 
 function checkResult() {
   if (!isGenerateMines) return
-  const blocks = state.flat()
+  const blocks = state.value.flat()
   // 表示全部翻完了
   if (blocks.every(b => b.revealed || b.flagged)) {
     if (blocks.filter(b => b.flagged).length === mineCount)
@@ -113,20 +123,17 @@ function checkResult() {
 function generateInitBlocks() {
   return Array.from({ length: MAX_HEIGHT }, (_, x) =>
     Array.from({ length: MAX_WIDTH }, (_, y): Block => ({
-      x, y, isMine: false, revealed: false, flagged: false,
+      x, y, isMine: false, revealed: false, flagged: false, aroundMine: 0,
     })))
 }
 function reset() {
   mineCount = 0
   isGenerateMines = false
-  state.forEach(x => x.forEach((block) => {
-    block.flagged = false
-    block.revealed = false
-    block.isMine = false
-    delete block.aroundMine
-  }))
+  state.value = generateInitBlocks()
 }
-watch(state, checkResult)
+
+watch(state.value, checkResult)
+
 </script>
 <template>
   <h1>Minesweeper</h1>
@@ -134,10 +141,6 @@ watch(state, checkResult)
     <button border px1 @click="reset">
       reset
     </button>
-    <button border px1 @click="count.age++">
-      add {{ count.age }}
-    </button>
-    <div>{{ mineCount }}</div>
   </div>
   <div p10 flex="~ wrap col" items-center>
     <div v-for="(line, idx) of state" :key="idx" flex="~ nowrap">

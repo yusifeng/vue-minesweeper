@@ -1,13 +1,8 @@
 <script setup lang="ts">
-const name = $ref('')
-
-const router = useRouter()
-const go = () => {
-  if (name)
-    router.push(`/hi/${encodeURIComponent(name)}`)
-}
+import MineSweeper from './minesweeper/index.vue'
+// import Maze from './maze/index.vue'
 </script>
 
 <template>
-  <div>Home </div>
+  <MineSweeper />
 </template>
